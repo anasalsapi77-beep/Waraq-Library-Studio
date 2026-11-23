@@ -2,21 +2,21 @@ services:
   - type: web
     name: waraq-library-studio
     runtime: python
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
     buildCommand: python --version
     startCommand: python main.py
     healthCheckPath: /health
     autoDeployTrigger: checksPass
-    disk:
-      name: waraq-library-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: HOST
         value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.13
       - key: LIBRARY_DB
-        value: /var/data/library.db
+        value: /tmp/waraq/library.db
       - key: WARAQ_DEMO_MODE
         value: "0"
       - key: WARAQ_COOKIE_SECURE

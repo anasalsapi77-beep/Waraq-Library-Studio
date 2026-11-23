@@ -155,22 +155,30 @@ python main.py
 
 The database path can be overridden with `LIBRARY_DB`. `WARAQ_COOKIE_SECURE=1` enables the Secure cookie flag when serving through HTTPS.
 
-## Deployment on Render
+## Free public demo on Render
 
-A Render Blueprint is included at the repository root in `render.yaml`. It configures a Python web service in Singapore, HTTPS cookies, production mode, a persistent SQLite disk mounted at `/var/data`, and automatic deploys only after GitHub checks pass.
+A Render Blueprint is included at the repository root in `render.yaml`. It creates a **Free** Python web service in Singapore with HTTPS cookies, production mode, a health check and a secret first-manager password.
 
-1. Open the Render Dashboard and choose **New → Blueprint**.
-2. Connect this GitHub repository and select the `main` branch.
-3. Review the service plan and persistent disk charges before creating it.
-4. When prompted, set `WARAQ_ADMIN_PASSWORD` to a new, unique password of at least 14 characters. Do not reuse the demo password.
-5. Render sets the service host, port, persistent database path and Secure cookie flag from the Blueprint.
+### Deploy
 
-The initial configuration uses a small paid web service because Render persistent disks require a paid service. Current published starting prices are $7/month for the 0.5 CPU / 512 MB service plan and $0.25 per GB-month for disk storage. A 1 GB disk therefore starts at about $0.25/month, before any applicable taxes or extra usage. Check Render's current pricing before provisioning.
+1. Create a free Render account and connect your GitHub account.
+2. In Render, choose **New → Blueprint**.
+3. Select this repository, `anasalsapi77-beep/Waraq-Library-Studio`, and branch `main`.
+4. During the initial Blueprint setup, provide a new, unique value for `WARAQ_ADMIN_PASSWORD` (at least 14 characters). Do not use `admin123` or any password used elsewhere.
+5. Create the Blueprint and wait for the service deploy to finish.
+6. Open the `onrender.com` URL shown on the service page and sign in as `library-owner` using the password you supplied.
 
-The service is intentionally single-instance because SQLite is stored on one persistent disk. Render's included `/health` endpoint is used for health checks. The app's built-in Python HTTP server is a small academic/demo server, not a high-traffic production stack; use this deployment for a controlled portfolio demonstration, not sensitive real-world library records. Back up the SQLite database regularly.
+For a more detailed walkthrough, see [Free Render deployment guide](docs/DEPLOY_RENDER_FREE.md).
 
-GitHub Pages only hosts static files and cannot run this Python backend.
+### Important: demo only, not permanent library storage
 
+The free service uses a temporary SQLite database at `/tmp/waraq/library.db`. **All library changes can disappear** when the free service spins down, restarts or redeploys. Render spins a free web service down after 15 minutes without inbound traffic; waking it on the next visit takes about one minute. Free services also have 750 instance hours per workspace per calendar month.
+
+This means books, members, accounts created after deployment and lending history are not guaranteed to survive. Use this public deployment only as a portfolio demonstration with non-sensitive sample data. Do not use it for real library operations or personal information.
+
+The Blueprint deliberately does not create demo accounts or sample records. The initial manager is created from the private environment variable during first startup. The free service has no persistent disk. Render's free Postgres expires after 30 days, so it is not configured as a permanent database here.
+
+Keep an eye on Render's usage page. If you have added a payment method, exceeding included bandwidth or build-pipeline allowances can incur charges; without a payment method, Render suspends free services when relevant limits are reached.
 ---
 
 وَرَق — مساحةٌ للقراءة والتعلّم.
