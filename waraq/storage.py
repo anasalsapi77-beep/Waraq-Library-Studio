@@ -32,8 +32,10 @@ def db() -> Iterator[sqlite3.Connection]:
 
 
 def init_db() -> None:
-    """Create current schema and seed examples only when the tables are empty."""
+    """Create the schema and seed demo data only in local demo mode."""
     from .security import hash_password
+    from .config import ADMIN_PASSWORD, ADMIN_USERNAME, DEMO_MODE
+
     with db() as connection:
         connection.executescript("""
         CREATE TABLE IF NOT EXISTS members (
@@ -78,42 +80,74 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS items_search_idx ON items(title, specialization, author);
         """)
 
-        # Preserve existing catalogue and member data. Seed only empty collections.
-        if connection.execute("SELECT COUNT(*) FROM items").fetchone()[0] == 0:
-            connection.executemany("""INSERT INTO items
-                (id, item_type, title, publication_year, specialization, description, author, pages, publisher, project_year, team)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", [
-                (1, "book", "Deep Learning", 2012, "Artificial Intelligence",
-                 "A foundational technical title exploring neural networks and modern machine learning.", "Ahmad", 451, "ACM", "", ""),
-                (2, "book", "Cyber Security", 2022, "Networks",
-                 "An introduction to security concepts, network protection, and digital risk.", "Nawar", 551, "FBI", "", ""),
-                (3, "project", "DataBase", 2025, "Software",
-                 "A student project from the original library system sample collection.", "", None, "", "Third", "Kings"),
-            ])
+        if DEMO_MODE:
+            # Seed illustrative catalogue entries and accounts for local evaluation only.
+            if connection.execute("SELECT COUNT(*) FROM items").fetchone()[0] == 0:
+                connection.executemany("""INSERT INTO items
+                    (id, item_type, title, publication_year, specialization, description, author, pages, publisher, project_year, team)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", [
+                    (1, "book", "Deep Learning", 2012, "Artificial Intelligence",
+                     "A foundational technical title exploring neural networks and modern machine learning.", "Ahmad", 451, "ACM", "", ""),
+                    (2, "book", "Cyber Security", 2022, "Networks",
+                     "An introduction to security concepts, network protection, and digital risk.", "Nawar", 551, "FBI", "", ""),
+                    (3, "project", "DataBase", 2025, "Software",
+                     "A student project from the original library system sample collection.", "", None, "", "Third", "Kings"),
+                ])
 
-        if connection.execute("SELECT COUNT(*) FROM members").fetchone()[0] == 0:
-            connection.executemany("INSERT INTO members(id, name) VALUES (?, ?)", [
-                (101, "Saif"), (102, "Rida"), (103, "Aws")
-            ])
+            if connection.execute("SELECT COUNT(*) FROM members").fetchone()[0] == 0:
+                connection.executemany("INSERT INTO members(id, name) VALUES (?, ?)", [
+                    (101, "Saif"), (102, "Rida"), (103, "Aws")
+                ])
 
-        manager = connection.execute("SELECT id FROM users WHERE username='admin' COLLATE NOCASE").fetchone()
-        if manager is None:
-            connection.execute(
-                "INSERT INTO users(username, password_hash, role) VALUES (?, ?, 'manager')",
-                ("admin", hash_password("admin123")),
-            )
-
-        # Repair missing demo logins without overwriting passwords set by users.
-        for member_id, name in [(101, "Saif"), (102, "Rida"), (103, "Aws")]:
-            member = connection.execute("SELECT id FROM members WHERE id=?", (member_id,)).fetchone()
-            if member is None:
-                continue
-            linked = connection.execute("SELECT id FROM users WHERE member_id=?", (member_id,)).fetchone()
-            if linked is None:
-                username = f"{name.lower()}_{member_id}"
+            manager = connection.execute("SELECT id FROM users WHERE username='admin' COLLATE NOCASE").fetchone()
+            if manager is None:
                 connection.execute(
-                    "INSERT OR IGNORE INTO users(username, password_hash, role, member_id) VALUES (?, ?, 'member', ?)",
-                    (username, hash_password(f"{name.lower()}123"), member_id),
+                    "INSERT INTO users(username, password_hash, role) VALUES (?, ?, 'manager')",
+                    ("admin", hash_password("admin123")),
+                )
+
+            # Repair missing sample logins without overwriting passwords changed by users.
+            for member_id, name in [(101, "Saif"), (102, "Rida"), (103, "Aws")]:
+                member = connection.execute("SELECT id FROM members WHERE id=?", (member_id,)).fetchone()
+                if member is None:
+                    continue
+                linked = connection.execute("SELECT id FROM users WHERE member_id=?", (member_id,)).fetchone()
+                if linked is None:
+                    username = f"{name.lower()}_{member_id}"
+                    connection.execute(
+                        "INSERT OR IGNORE INTO users(username, password_hash, role, member_id) VALUES (?, ?, 'member', ?)",
+                        (username, hash_password(f"{name.lower()}123"), member_id),
+                    )
+        else:
+            # Production mode never creates the published demo credentials or sample records.
+            demo_accounts = ("admin", "saif_101", "rida_102", "aws_103")
+            placeholders = ",".join("?" for _ in demo_accounts)
+            existing_demo = connection.execute(
+                f"SELECT username FROM users WHERE username COLLATE NOCASE IN ({placeholders})",
+                demo_accounts,
+            ).fetchall()
+            if existing_demo:
+                names = ", ".join(row["username"] for row in existing_demo)
+                raise RuntimeError(
+                    "This database still contains demo accounts (" + names +
+                    "). Use a clean production database before enabling WARAQ_DEMO_MODE=0."
+                )
+
+            manager = connection.execute("SELECT id FROM users WHERE role='manager' LIMIT 1").fetchone()
+            if manager is None:
+                if not ADMIN_USERNAME or len(ADMIN_USERNAME) > 80 or len(ADMIN_PASSWORD) < 14:
+                    raise RuntimeError(
+                        "Production setup requires WARAQ_ADMIN_USERNAME and a unique "
+                        "WARAQ_ADMIN_PASSWORD of at least 14 characters."
+                    )
+                collision = connection.execute(
+                    "SELECT id FROM users WHERE username=? COLLATE NOCASE", (ADMIN_USERNAME,)
+                ).fetchone()
+                if collision:
+                    raise RuntimeError("WARAQ_ADMIN_USERNAME is already used by a non-manager account.")
+                connection.execute(
+                    "INSERT INTO users(username, password_hash, role) VALUES (?, ?, 'manager')",
+                    (ADMIN_USERNAME, hash_password(ADMIN_PASSWORD)),
                 )
 
 

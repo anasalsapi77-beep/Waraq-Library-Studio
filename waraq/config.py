@@ -14,3 +14,5 @@ SESSION_TTL_SECONDS = 12 * 60 * 60
 MAX_FORM_BYTES = 64 * 1024
 DEMO_MODE = os.environ.get("WARAQ_DEMO_MODE", "1").strip().lower() not in {"0", "false", "no", "off"}
 COOKIE_SECURE = os.environ.get("WARAQ_COOKIE_SECURE", "0").strip().lower() in {"1", "true", "yes", "on"}
+ADMIN_USERNAME = os.environ.get("WARAQ_ADMIN_USERNAME", "").strip()
+ADMIN_PASSWORD = os.environ.get("WARAQ_ADMIN_PASSWORD", "")

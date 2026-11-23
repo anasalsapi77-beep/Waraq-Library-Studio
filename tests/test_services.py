@@ -116,6 +116,34 @@ class WaraqServiceTests(unittest.TestCase):
         self.assertIsNotNone(security.authenticate("admin", "custom-admin-password"))
         self.assertIsNotNone(security.authenticate("rida_102", "rida123"))
 
+    def test_production_mode_creates_only_configured_manager(self):
+        from unittest.mock import patch
+        with patch.object(storage, "DEMO_MODE", False), \
+             patch("waraq.config.ADMIN_USERNAME", "library-owner"), \
+             patch("waraq.config.ADMIN_PASSWORD", "correct-horse-battery-staple-2026"):
+            storage.init_db()
+        manager = security.authenticate("library-owner", "correct-horse-battery-staple-2026")
+        self.assertIsNotNone(manager)
+        self.assertEqual(manager["role"], "manager")
+        self.assertIsNone(security.authenticate("admin", "admin123"))
+        self.assertIsNone(security.authenticate("saif_101", "saif123"))
+        self.assertEqual(library.get_items(), [])
+        self.assertEqual(library.get_members(), [])
+
+    def test_production_mode_requires_secure_first_admin_credentials(self):
+        from unittest.mock import patch
+        with patch.object(storage, "DEMO_MODE", False), \
+             patch("waraq.config.ADMIN_USERNAME", ""), \
+             patch("waraq.config.ADMIN_PASSWORD", ""):
+            with self.assertRaisesRegex(RuntimeError, "WARAQ_ADMIN_USERNAME"):
+                storage.init_db()
+
+    def test_demo_reset_is_disabled_outside_demo_mode(self):
+        from unittest.mock import patch
+        with patch.object(security, "DEMO_MODE", False):
+            with self.assertRaisesRegex(RuntimeError, "disabled"):
+                security.reset_demo_accounts()
+
     def test_database_health(self):
         health = storage.database_health()
         self.assertTrue(health["ok"])

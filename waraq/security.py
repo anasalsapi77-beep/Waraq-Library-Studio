@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import secrets
 
+from .config import DEMO_MODE
 from .storage import db, init_db
 
 PBKDF2_ITERATIONS = 310_000
@@ -45,7 +46,9 @@ def authenticate(username: str, password: str) -> dict | None:
 
 
 def reset_demo_accounts() -> None:
-    """Reset only sample logins; keep all catalogue, members, and loan records."""
+    """Reset sample logins in local demo mode only."""
+    if not DEMO_MODE:
+        raise RuntimeError("Demo account reset is disabled when WARAQ_DEMO_MODE=0.")
     init_db()
     demo_members = [(101, "Saif", "saif_101", "saif123"),
                     (102, "Rida", "rida_102", "rida123"),

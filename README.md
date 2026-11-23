@@ -155,9 +155,21 @@ python main.py
 
 The database path can be overridden with `LIBRARY_DB`. `WARAQ_COOKIE_SECURE=1` enables the Secure cookie flag when serving through HTTPS.
 
-## GitHub and deployment
+## Deployment on Render
 
-This repository is ready to publish as source code. The Python/SQLite backend **cannot run on GitHub Pages**; it needs a Python-capable host with persistent storage. The included development server is intended for local use and academic demonstration, not production hosting. A public deployment should use a production WSGI/ASGI server, HTTPS, persistent secret/session management, database backups, controlled account provisioning and a deployment-specific security review. Disable demo credentials before any public deployment.
+A Render Blueprint is included at the repository root in `render.yaml`. It configures a Python web service in Singapore, HTTPS cookies, production mode, a persistent SQLite disk mounted at `/var/data`, and automatic deploys only after GitHub checks pass.
+
+1. Open the Render Dashboard and choose **New → Blueprint**.
+2. Connect this GitHub repository and select the `main` branch.
+3. Review the service plan and persistent disk charges before creating it.
+4. When prompted, set `WARAQ_ADMIN_PASSWORD` to a new, unique password of at least 14 characters. Do not reuse the demo password.
+5. Render sets the service host, port, persistent database path and Secure cookie flag from the Blueprint.
+
+The initial configuration uses a small paid web service because Render persistent disks require a paid service. Current published starting prices are $7/month for the 0.5 CPU / 512 MB service plan and $0.25 per GB-month for disk storage. A 1 GB disk therefore starts at about $0.25/month, before any applicable taxes or extra usage. Check Render's current pricing before provisioning.
+
+The service is intentionally single-instance because SQLite is stored on one persistent disk. Render's included `/health` endpoint is used for health checks. The app's built-in Python HTTP server is a small academic/demo server, not a high-traffic production stack; use this deployment for a controlled portfolio demonstration, not sensitive real-world library records. Back up the SQLite database regularly.
+
+GitHub Pages only hosts static files and cannot run this Python backend.
 
 ---
 
