@@ -118,7 +118,8 @@ class WaraqServiceTests(unittest.TestCase):
 
     def test_production_mode_creates_only_configured_manager(self):
         from unittest.mock import patch
-        with patch.object(storage, "DEMO_MODE", False), \
+        storage.DB_PATH.unlink(missing_ok=True)
+        with patch("waraq.config.DEMO_MODE", False), \
              patch("waraq.config.ADMIN_USERNAME", "library-owner"), \
              patch("waraq.config.ADMIN_PASSWORD", "correct-horse-battery-staple-2026"):
             storage.init_db()
@@ -132,7 +133,8 @@ class WaraqServiceTests(unittest.TestCase):
 
     def test_production_mode_requires_secure_first_admin_credentials(self):
         from unittest.mock import patch
-        with patch.object(storage, "DEMO_MODE", False), \
+        storage.DB_PATH.unlink(missing_ok=True)
+        with patch("waraq.config.DEMO_MODE", False), \
              patch("waraq.config.ADMIN_USERNAME", ""), \
              patch("waraq.config.ADMIN_PASSWORD", ""):
             with self.assertRaisesRegex(RuntimeError, "WARAQ_ADMIN_USERNAME"):
